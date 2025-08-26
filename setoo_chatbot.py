@@ -1,7 +1,7 @@
 import json
 from google.genai import Client
 
-client = Client(api_key="AIzaSyDX1-V0gchoeOFf9D4GvDwXwD6rg4DnJ-8") 
+client = Client(api_key="") 
 
 
 with open("cleaned_scraped_data.json", "r", encoding="utf-8") as f:
