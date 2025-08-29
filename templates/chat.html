@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Setoo AI Assistant</title>
+<style>
+  body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    color: white;
+    overflow: hidden;
+    flex-direction: column;
+  }
+
+  h1 {
+    font-size: 36px;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  /* Chat toggle button */
+  #chat-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    background: #fff;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    animation: bounce 2s infinite;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  #chat-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+  }
+  @keyframes bounce {
+    0%,100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    60% { transform: translateY(-5px); }
+  }
+
+  /* Robot avatar inside button */
+  #chat-btn svg {
+    width: 48px;
+    height: 48px;
+  }
+
+  /* Chat box */
+  #chat-box {
+    position: fixed;
+    bottom: 120px;
+    right: 30px;
+    width: 350px;
+    max-height: 500px;
+    background: white;
+    color: #333;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideUp 0.3s ease forwards;
+    z-index: 1000;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(50px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  #chat-header {
+    background: #6a11cb;
+    color: white;
+    padding: 15px 20px;
+    font-weight: bold;
+    font-size: 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  #close-chat {
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 20px;
+  }
+
+  #messages {
+    flex: 1;
+    padding: 12px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #f9f9f9;
+  }
+
+  .message {
+    padding: 10px 16px;
+    border-radius: 20px;
+    max-width: 80%;
+    line-height: 1.4;
+    font-size: 14px;
+  }
+
+  .user { background: #007bff; color: white; align-self: flex-end; border-bottom-right-radius: 0; }
+  .ai { background: #e4e6eb; color: #333; align-self: flex-start; border-bottom-left-radius: 0; }
+  .loading { font-style: italic; color: #888; align-self: flex-start; }
+
+  #input-area {
+    display: flex;
+    padding: 12px;
+    border-top: 1px solid #ddd;
+    background: #fff;
+  }
+  #input-area input {
+    flex: 1;
+    padding: 10px 16px;
+    border-radius: 25px;
+    border: 1px solid #ccc;
+    outline: none;
+    font-size: 14px;
+  }
+  #input-area button {
+    margin-left: 10px;
+    background: #6a11cb;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #input-area button:hover { background: #4f0da0; }
+</style>
+</head>
+<body>
+
+<h1>AI Assistant</h1>
+
+<!-- Chat toggle button with Robot Avatar -->
+<button id="chat-btn" aria-label="Open chat">
+  <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#6a11cb"/>
+        <stop offset="1" stop-color="#2575fc"/>
+      </linearGradient>
+    </defs>
+    <rect x="6" y="14" width="52" height="36" rx="12" fill="url(#g)" />
+    <circle cx="22" cy="32" r="5" fill="#fff"/>
+    <circle cx="42" cy="32" r="5" fill="#fff"/>
+    <rect x="24" y="42" width="16" height="3" rx="1.5" fill="#fff" opacity=".9"/>
+    <rect x="30" y="6" width="4" height="10" rx="2" fill="#94a3b8"/>
+    <circle cx="32" cy="6" r="3" fill="#6a11cb"/>
+  </svg>
+</button>
+
+<!-- Chat Box -->
+<div id="chat-box">
+  <div id="chat-header">
+    Setoo AI Assistant
+    <span id="close-chat">&times;</span>
+  </div>
+  <div id="messages">
+    <div class="message ai">Hello! How can I assist you today?</div>
+  </div>
+  <div id="input-area">
+    <input type="text" id="input" placeholder="Type a message...">
+    <button id="send-btn">➡️</button>
+  </div>
+</div>
+
+<script>
+  const chatBtn = document.getElementById("chat-btn");
+  const chatBox = document.getElementById("chat-box");
+  const closeChat = document.getElementById("close-chat");
+  const sendBtn = document.getElementById("send-btn");
+  const input = document.getElementById("input");
+  const messages = document.getElementById("messages");
+
+  chatBtn.addEventListener("click", () => chatBox.style.display = "flex");
+  closeChat.addEventListener("click", () => chatBox.style.display = "none");
+
+  function showAIMessage(text) {
+    const aiDiv = document.createElement("div");
+    aiDiv.className = "message ai";
+    aiDiv.innerHTML = text;
+    messages.appendChild(aiDiv);
+    scrollToBottom();
+  }
+  function showUserMessage(text) {
+    const userDiv = document.createElement("div");
+    userDiv.className = "message user";
+    userDiv.textContent = text;
+    messages.appendChild(userDiv);
+    scrollToBottom();
+  }
+  function scrollToBottom() {
+    messages.scrollTo({ top: messages.scrollHeight, behavior: "smooth" });
+  }
+
+  let ws;
+  function initWebSocket() {
+    ws = new WebSocket(`ws://${window.location.host}/ws/chat`);
+    ws.onopen = () => console.log("Connected");
+    ws.onmessage = (event) => { removeLoading(); showAIMessage(event.data); };
+    ws.onerror = () => showAIMessage("⚠️ Error: Cannot reach server");
+    ws.onclose = () => setTimeout(initWebSocket, 2000);
+  }
+  initWebSocket();
+
+  function sendMessage() {
+    const msg = input.value.trim();
+    if (!msg || ws.readyState !== WebSocket.OPEN) return;
+    showUserMessage(msg);
+    showLoading();
+    ws.send(msg);
+    input.value = "";
+  }
+
+  function showLoading() {
+    const loadingDiv = document.createElement("div");
+    loadingDiv.className = "message loading";
+    loadingDiv.id = "loading";
+    loadingDiv.textContent = "AI is typing...";
+    messages.appendChild(loadingDiv);
+    scrollToBottom();
+  }
+  function removeLoading() {
+    const loadingDiv = document.getElementById("loading");
+    if (loadingDiv) loadingDiv.remove();
+  }
+
+  sendBtn.addEventListener("click", sendMessage);
+  input.addEventListener("keypress", (e) => { if(e.key === "Enter") sendMessage(); });
+</script>
+</body>
+</html>

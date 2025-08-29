@@ -1,12 +1,12 @@
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup 
 import re
 from urllib.parse import urljoin, urlparse
 import json
 from google.genai import Client  
 
 
-client = Client(api_key="") 
+client = Client(api_key="AIzaSyAytoOd44cqWsUHp2rOtl0EeeJ51bKDYSI") 
 
 def clean_text(text):
     text = text.strip()
@@ -30,7 +30,6 @@ def scrape_page(url, base_url):
     scraped_data = {}
 
     scraped_data['title'] = clean_text(soup.title.string) if soup.title else "No title"
-
     headings = {}
     for i in range(1, 4):
         found = [clean_text(h.get_text()) for h in soup.find_all(f'h{i}') if clean_text(h.get_text())]
@@ -115,7 +114,7 @@ def clean_scraped_data(scraped_data, base_domain=None):
             cleaned_data.append(cleaned_page)
     print("data cleaned successfully")
     return cleaned_data
-url = "https://www.setoo.co"
+url = "https://webscraper.io/test-sites"
 result = scrape_website(url)
 base_domain = urlparse(url).netloc
 cleaned_result = clean_scraped_data(result, base_domain)
@@ -125,7 +124,8 @@ with open("cleaned_scraped_data.json", "w", encoding="utf-8") as f:
     json.dump(cleaned_result, f, indent=4, ensure_ascii=False)
 
 system_prompt =f"""
-You are a helpful AI assistant. 
+You are a helpful AI assistant.
+
 Use ONLY this website data to answer user questions:
 {json.dumps(cleaned_result)}
 """
