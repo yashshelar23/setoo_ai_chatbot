@@ -3,7 +3,6 @@ import re
 from urllib.parse import urlparse, urljoin
 import requests
 from bs4 import BeautifulSoup
-import google.generativeai as genai
 from pydantic import BaseModel
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
@@ -90,31 +89,38 @@ class DataCleaner:
         return cleaned_data
 
 
-class GeminiClient:
-    def __init__(self, api_key: str, model: str = "gemini-2.5-flash"):
-        genai.configure(api_key=api_key)
+class OpenRouterClient:
+    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
+        self.api_key = api_key
         self.model = model
+        self.api_url = "https://openrouter.ai/api/v1/chat/completions"
 
     def generate_response(self, prompt: str):
-        response = genai.GenerativeModel(self.model).generate_content(prompt)
-        if hasattr(response, "candidates") and len(response.candidates) > 0:
-            candidate = response.candidates[0]
-            content = candidate.content
-            text = ""
-            if hasattr(content, "parts"):
-                for part in content.parts:
-                    text += part.text + "\n"
-            elif isinstance(content, str):
-                text = content
-            return text.strip()
-        return "Sorry, I couldn't generate a response."
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": "You are a helpful AI assistant."},
+                {"role": "user", "content": prompt}
+            ]
+        }
+        try:
+            response = requests.post(self.api_url, headers=headers, json=data, timeout=20)
+            response.raise_for_status()
+            resp_json = response.json()
+            return resp_json["choices"][0]["message"]["content"].strip()
+        except Exception as e:
+            return f"Error from OpenRouter: {str(e)}"
 
 
 class ChatHandler:
-    def __init__(self, system_prompt, gemini_client):
+    def __init__(self, system_prompt, ai_client):
         self.chat_history = []
         self.system_prompt = system_prompt
-        self.gemini_client = gemini_client
+        self.ai_client = ai_client
 
     def get_prompt(self, user_message):
         prompt = self.system_prompt + "\n\n"
@@ -125,18 +131,18 @@ class ChatHandler:
 
     def process_message(self, user_message):
         prompt = self.get_prompt(user_message)
-        bot_answer = self.gemini_client.generate_response(prompt)
-        if bot_answer.strip() == "":
+        bot_answer = self.ai_client.generate_response(prompt)
+        if not bot_answer.strip():
             bot_answer = "Sorry, I don't have an answer for that based on the website data."
         self.chat_history.append({"user": user_message, "bot": bot_answer})
         return bot_answer
 
-class GeminiScraperSDK:
+class OpenRouterScraperSDK:
     def __init__(self, api_key, system_prompt):
         self.scraper = WebScraper()
         self.cleaner = DataCleaner()
-        self.gemini_client = GeminiClient(api_key)
-        self.chat_handler = ChatHandler(system_prompt, self.gemini_client)
+        self.ai_client = OpenRouterClient(api_key)
+        self.chat_handler = ChatHandler(system_prompt, self.ai_client)
 
     def scrape_and_clean(self, url):
         scraped_data = self.scraper.scrape_website(url)
@@ -145,24 +151,33 @@ class GeminiScraperSDK:
     def chat(self, user_message):
         return self.chat_handler.process_message(user_message)
 
-
 app = FastAPI()
-
-# File where history will be stored
 CHAT_FILE = Path("chat_history.jsonl")
+templates = Jinja2Templates(directory="templates")
+
+# Replace with your OpenRouter API key
+OPENROUTER_API_KEY = ""
+sdk = OpenRouterScraperSDK(api_key=OPENROUTER_API_KEY, system_prompt=system_prompt)
+
+# Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://127.0.0.1:5500"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class ChatCreate(BaseModel):
     username: str
     message: str
 
-# ✅ Save message (append to file)
 @app.post("/chat/")
 def add_message(chat: ChatCreate):
     with CHAT_FILE.open("a", encoding="utf-8") as f:
         f.write(json.dumps(chat.dict(), ensure_ascii=False) + "\n")
     return {"status": "Message saved"}
 
-# ✅ Get all messages
 @app.get("/chat/")
 def get_messages():
     messages = []
@@ -172,20 +187,7 @@ def get_messages():
                 messages.append(json.loads(line))
     return {"messages": messages}
 
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://127.0.0.1:5500"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-templates = Jinja2Templates(directory="templates")
-
-sdk = GeminiScraperSDK(api_key="AIzaSyAytoOd44cqWsUHp2rOtl0EeeJ51bKDYSI", system_prompt=system_prompt)
-
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 async def get_scrape_page(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
@@ -193,10 +195,8 @@ async def get_scrape_page(request: Request):
 async def scrape_url(url: str = Form(...)):
     try:
         cleaned_result = sdk.scrape_and_clean(url)
-
         with open("cleaned_scraped_data.json", "w", encoding="utf-8") as f:
             json.dump(cleaned_result, f, indent=4, ensure_ascii=False)
-
         return JSONResponse({
             "status": "success",
             "message": "Scraping completed",
@@ -216,8 +216,8 @@ def get_latest_data():
     except FileNotFoundError:
         return {}
 
-
-
+with open("cleaned_scraped_data.json", "r", encoding="utf-8") as f:
+    cleaned_data = json.load(f)
 
 @app.websocket("/ws/chat")
 async def websocket_endpoint(websocket: WebSocket):
@@ -225,33 +225,29 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             user_message = await websocket.receive_text()
-            # ✅ Load fresh scraped data every time
             scraped_data = get_latest_data()
             context_text = json.dumps(scraped_data)
-
-            # ✅ Combine user message with latest context
             prompt = f"""
-            Your are AI assistant and title of {context_text}
-            Markdown formatting and bulleted points.
-            With emojis for engagement.
-            Give introduction to you.
-            Every response should be concise and to the point.
-            Every response should be next line. 
-            Not need to introducetion on every response.
+
+You are a friendly AI assistant, like ChatGPT. 
+Use ONLY the following website data to answer user questions:
+{json.dumps(cleaned_data)}
+Guidelines:
+- Use <b> or <strong> for important keywords instead of Markdown.
+- Use <ul> and <li> for lists instead of hyphens.
+- Use emojis to make responses friendly.
+- Keep answers concise and clear.
+- Break text into short paragraphs or lines.
+- Avoid repeating greetings unnecessarily.
+
 {context_text}
+
 
 User: {user_message}
 """
+            answer = sdk.chat_handler.process_message(prompt)
 
-            try:
-                model = genai.GenerativeModel("gemini-1.5-flash")
-                response = model.generate_content(prompt)
+            await websocket.send_text(answer)
 
-                
-                answer = getattr(response, 'text', "No response from AI.")
-                await websocket.send_text(answer)
-
-            except Exception as e:
-                await websocket.send_text(f"Error: {str(e)}")
     except WebSocketDisconnect:
         print("Client disconnected")

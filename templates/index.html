@@ -81,7 +81,6 @@ document.getElementById("scrapeBtn").addEventListener("click", async () => {
     const formData = new FormData();
     formData.append("url", url);
 
-    // Simulate progress steps before actual completion
     let progress = 0;
     const steps = [20, 40, 60, 80];
     let index = 0;
@@ -107,7 +106,6 @@ document.getElementById("scrapeBtn").addEventListener("click", async () => {
             localStorage.setItem("scrapedData", JSON.stringify(data.cleaned_data_preview));
             chatbotBtn.classList.add("enabled");
 
-            // Auto-redirect after 2 seconds to chatbot
             setTimeout(() => {
                 window.location.href = "/chat";
             }, 2000);
@@ -123,7 +121,6 @@ document.getElementById("scrapeBtn").addEventListener("click", async () => {
     }
 });
 
-// Optional: Auto-refresh preview if server data changes
 setInterval(async () => {
     const scrapedData = localStorage.getItem("scrapedData");
     if(scrapedData){

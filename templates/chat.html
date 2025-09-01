@@ -4,189 +4,670 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Setoo AI Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  body {
-    font-family: 'Arial', sans-serif;
+  * {
     margin: 0;
     padding: 0;
-    background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    color: white;
-    overflow: hidden;
-    flex-direction: column;
+    box-sizing: border-box;
   }
 
-  h1 {
-    font-size: 36px;
-    margin-bottom: 20px;
+  :root {
+    --primary: #667eea;
+    --primary-dark: #5a67d8;
+    --secondary: #764ba2;
+    --accent: #f093fb;
+    --background: #0f0f23;
+    --surface: #1a1a2e;
+    --surface-light: #16213e;
+    --text-primary: #ffffff;
+    --text-secondary: #a0aec0;
+    --text-muted: #718096;
+    --border: #2d3748;
+    --success: #48bb78;
+    --warning: #ed8936;
+    --error: #f56565;
+    --shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    --shadow-lg: 0 35px 60px -12px rgba(0, 0, 0, 0.4);
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--background);
+    color: var(--text-primary);
+    overflow-x: hidden;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  /* Animated background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+      radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
+    animation: backgroundShift 20s ease-in-out infinite;
+    z-index: -1;
+  }
+
+  @keyframes backgroundShift {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    50% { transform: scale(1.1) rotate(180deg); }
+  }
+
+  /* Main container */
+  .container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Hero section */
+  .hero {
     text-align: center;
+    margin-bottom: 3rem;
+    animation: fadeInUp 1s ease-out;
+  }
+
+  .hero h1 {
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-weight: 700;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: textShimmer 3s ease-in-out infinite;
+  }
+
+  @keyframes textShimmer {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  .hero p {
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    font-weight: 300;
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* Floating elements */
+  .floating-elements {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .floating-element {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .floating-element:nth-child(1) { top: 10%; left: 10%; animation-delay: 0s; }
+  .floating-element:nth-child(2) { top: 20%; right: 10%; animation-delay: 2s; }
+  .floating-element:nth-child(3) { bottom: 20%; left: 20%; animation-delay: 4s; }
+  .floating-element:nth-child(4) { bottom: 10%; right: 20%; animation-delay: 1s; }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(180deg); }
   }
 
   /* Chat toggle button */
   #chat-btn {
     position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 80px;
-    height: 80px;
+    bottom: 2rem;
+    right: 2rem;
+    width: 70px;
+    height: 70px;
     border-radius: 50%;
     border: none;
     cursor: pointer;
-    background: #fff;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    box-shadow: var(--shadow);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 999;
-    animation: bounce 2s infinite;
-    transition: transform 0.3s, box-shadow 0.3s;
-  }
-  #chat-btn:hover {
-    transform: scale(1.1);
-    box-shadow: 0 12px 28px rgba(0,0,0,0.35);
-  }
-  @keyframes bounce {
-    0%,100% { transform: translateY(0); }
-    40% { transform: translateY(-10px); }
-    60% { transform: translateY(-5px); }
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: pulse 2s infinite;
   }
 
-  /* Robot avatar inside button */
+  #chat-btn:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-lg);
+    animation: none;
+  }
+
+  #chat-btn:active {
+    transform: scale(0.95);
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: var(--shadow), 0 0 0 0 rgba(102, 126, 234, 0.7); }
+    50% { box-shadow: var(--shadow), 0 0 0 10px rgba(102, 126, 234, 0); }
+  }
+
   #chat-btn svg {
-    width: 48px;
-    height: 48px;
+    width: 32px;
+    height: 32px;
+    fill: white;
+    transition: transform 0.3s ease;
+  }
+
+  #chat-btn:hover svg {
+    transform: rotate(10deg);
   }
 
   /* Chat box */
   #chat-box {
     position: fixed;
-    bottom: 120px;
-    right: 30px;
-    width: 350px;
-    max-height: 500px;
-    background: white;
-    color: #333;
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    bottom: 6rem;
+    right: 2rem;
+    width: min(400px, calc(100vw - 2rem));
+    max-height: min(600px, calc(100vh - 10rem));
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    box-shadow: var(--shadow-lg);
     display: none;
     flex-direction: column;
     overflow: hidden;
-    animation: slideUp 0.3s ease forwards;
+    backdrop-filter: blur(20px);
     z-index: 1000;
+    animation: chatSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
 
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(50px); }
-    to { opacity: 1; transform: translateY(0); }
+  @keyframes chatSlideIn {
+    from { 
+      opacity: 0; 
+      transform: translateY(30px) scale(0.9); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateY(0) scale(1); 
+    }
   }
 
   #chat-header {
-    background: #6a11cb;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
     color: white;
-    padding: 15px 20px;
-    font-weight: bold;
-    font-size: 18px;
+    padding: 1.25rem 1.5rem;
+    font-weight: 600;
+    font-size: 1.1rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative;
+  }
+
+  #chat-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  }
+
+  .status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    opacity: 0.9;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    animation: statusPulse 2s infinite;
+  }
+
+  @keyframes statusPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
   }
 
   #close-chat {
     cursor: pointer;
-    font-weight: bold;
-    font-size: 20px;
+    font-weight: 600;
+    font-size: 1.5rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  #close-chat:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: rotate(90deg);
   }
 
   #messages {
     flex: 1;
-    padding: 12px;
+    padding: 1.5rem;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    background: #f9f9f9;
+    gap: 1rem;
+    background: var(--surface-light);
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  #messages::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  #messages::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  #messages::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
   }
 
   .message {
-    padding: 10px 16px;
-    border-radius: 20px;
-    max-width: 80%;
-    line-height: 1.4;
-    font-size: 14px;
+    padding: 0.875rem 1.25rem;
+    border-radius: 18px;
+    max-width: 85%;
+    line-height: 1.5;
+    font-size: 0.925rem;
+    position: relative;
+    animation: messageSlideIn 0.3s ease-out;
+    word-wrap: break-word;
   }
 
-  .user { background: #007bff; color: white; align-self: flex-end; border-bottom-right-radius: 0; }
-  .ai { background: #e4e6eb; color: #333; align-self: flex-start; border-bottom-left-radius: 0; }
-  .loading { font-style: italic; color: #888; align-self: flex-start; }
+  @keyframes messageSlideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .user { 
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white; 
+    align-self: flex-end; 
+    border-bottom-right-radius: 6px;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  }
+
+  .ai { 
+    background: var(--surface);
+    color: var(--text-primary); 
+    align-self: flex-start; 
+    border-bottom-left-radius: 6px;
+    border: 1px solid var(--border);
+  }
+
+  .loading { 
+    background: var(--surface);
+    color: var(--text-muted); 
+    align-self: flex-start;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .typing-indicator {
+    display: flex;
+    gap: 4px;
+  }
+
+  .typing-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    animation: typingBounce 1.4s infinite ease-in-out;
+  }
+
+  .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+  .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+  @keyframes typingBounce {
+    0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+    40% { transform: scale(1); opacity: 1; }
+  }
 
   #input-area {
     display: flex;
-    padding: 12px;
-    border-top: 1px solid #ddd;
-    background: #fff;
+    padding: 1.5rem;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    gap: 0.75rem;
+    align-items: flex-end;
   }
-  #input-area input {
+
+  #input {
     flex: 1;
-    padding: 10px 16px;
-    border-radius: 25px;
-    border: 1px solid #ccc;
+    padding: 0.875rem 1.25rem;
+    border-radius: 20px;
+    border: 1px solid var(--border);
     outline: none;
-    font-size: 14px;
+    font-size: 0.925rem;
+    background: var(--surface-light);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+    resize: none;
+    min-height: 44px;
+    max-height: 120px;
+    font-family: inherit;
   }
-  #input-area button {
-    margin-left: 10px;
-    background: #6a11cb;
+
+  #input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    background: var(--surface);
+  }
+
+  #input::placeholder {
+    color: var(--text-muted);
+  }
+
+  #send-btn {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
     color: white;
     border: none;
     border-radius: 50%;
-    width: 45px;
-    height: 45px;
+    width: 44px;
+    height: 44px;
     cursor: pointer;
-    font-size: 20px;
+    font-size: 1.125rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  }
+
+  #send-btn:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  }
+
+  #send-btn:active {
+    transform: scale(0.95);
+  }
+
+  #send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Welcome message */
+  .welcome-message {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+    font-style: italic;
+  }
+
+  /* Responsive design */
+  @media (max-width: 768px) {
+    .container {
+      padding: 1rem;
+    }
+
+    #chat-box {
+      bottom: 5rem;
+      right: 1rem;
+      left: 1rem;
+      width: auto;
+      max-height: calc(100vh - 8rem);
+    }
+
+    #chat-btn {
+      bottom: 1.5rem;
+      right: 1.5rem;
+      width: 60px;
+      height: 60px;
+    }
+
+    #chat-btn svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .hero h1 {
+      font-size: 2.5rem;
+    }
+
+    .hero p {
+      font-size: 1.125rem;
+      padding: 0 1rem;
+    }
+
+    .message {
+      max-width: 90%;
+      font-size: 0.875rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .container {
+      padding: 0.5rem;
+    }
+
+    #chat-box {
+      bottom: 4.5rem;
+      right: 0.5rem;
+      left: 0.5rem;
+    }
+
+    #chat-btn {
+      bottom: 1rem;
+      right: 1rem;
+    }
+
+    #messages {
+      padding: 1rem;
+    }
+
+    #input-area {
+      padding: 1rem;
+    }
+  }
+
+  /* Animations */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* Feature cards */
+  .features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    max-width: 900px;
+    width: 100%;
+    margin-top: 2rem;
+    animation: fadeIn 1s ease-out 0.5s both;
+  }
+
+  .feature-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+  }
+
+  .feature-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--primary);
+    box-shadow: var(--shadow);
+  }
+
+  .feature-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 1rem;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
   }
-  #input-area button:hover { background: #4f0da0; }
+
+  .feature-card h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+  }
+
+  .feature-card p {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  /* Chat states */
+  .chat-open #chat-btn {
+    background: var(--error);
+    animation: none;
+  }
+
+  .chat-open #chat-btn svg {
+    transform: rotate(45deg);
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Focus styles */
+  *:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
 </style>
 </head>
 <body>
 
-<h1>AI Assistant</h1>
+<div class="floating-elements">
+  <div class="floating-element"></div>
+  <div class="floating-element"></div>
+  <div class="floating-element"></div>
+  <div class="floating-element"></div>
+</div>
 
-<!-- Chat toggle button with Robot Avatar -->
+<div class="container">
+  <div class="hero">
+    <h1>Setoo AI Assistant</h1>
+    <p>Your intelligent companion for instant answers, creative solutions, and seamless conversations</p>
+  </div>
+
+  <div class="features">
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+          <path d="M12 2L2 7v10c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-10-5z"/>
+        </svg>
+      </div>
+      <h3>Secure & Private</h3>
+      <p>Your conversations are protected with enterprise-grade security</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+      </div>
+      <h3>Lightning Fast</h3>
+      <p>Get instant responses powered by advanced AI technology</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+        </svg>
+      </div>
+      <h3>Always Available</h3>
+      <p>24/7 assistance whenever you need help or inspiration</p>
+    </div>
+  </div>
+</div>
+
 <button id="chat-btn" aria-label="Open chat">
-  <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#6a11cb"/>
-        <stop offset="1" stop-color="#2575fc"/>
-      </linearGradient>
-    </defs>
-    <rect x="6" y="14" width="52" height="36" rx="12" fill="url(#g)" />
-    <circle cx="22" cy="32" r="5" fill="#fff"/>
-    <circle cx="42" cy="32" r="5" fill="#fff"/>
-    <rect x="24" y="42" width="16" height="3" rx="1.5" fill="#fff" opacity=".9"/>
-    <rect x="30" y="6" width="4" height="10" rx="2" fill="#94a3b8"/>
-    <circle cx="32" cy="6" r="3" fill="#6a11cb"/>
+  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4l4 4 4-4h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
   </svg>
 </button>
 
-<!-- Chat Box -->
 <div id="chat-box">
   <div id="chat-header">
-    Setoo AI Assistant
+    <div>
+      <div style="font-weight: 700;">Setoo AI</div>
+      <div class="status-indicator">
+        <div class="status-dot"></div>
+        Online
+      </div>
+    </div>
     <span id="close-chat">&times;</span>
   </div>
   <div id="messages">
-    <div class="message ai">Hello! How can I assist you today?</div>
+    <div class="message ai">
+      <div style="font-weight: 600; margin-bottom: 0.5rem;">👋 Hello! I'm Setoo AI</div>
+      I'm here to help you with questions, creative tasks, problem-solving, and more. What can I assist you with today?
+    </div>
   </div>
   <div id="input-area">
-    <input type="text" id="input" placeholder="Type a message...">
-    <button id="send-btn">➡️</button>
+    <textarea id="input" placeholder="Type your message..." rows="1"></textarea>
+    <button id="send-btn" aria-label="Send message">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+      </svg>
+    </button>
   </div>
 </div>
 
@@ -198,8 +679,31 @@
   const input = document.getElementById("input");
   const messages = document.getElementById("messages");
 
-  chatBtn.addEventListener("click", () => chatBox.style.display = "flex");
-  closeChat.addEventListener("click", () => chatBox.style.display = "none");
+  // Auto-resize textarea
+  input.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+  });
+
+  // Chat toggle functionality
+  chatBtn.addEventListener("click", () => {
+    chatBox.style.display = "flex";
+    document.body.classList.add('chat-open');
+    input.focus();
+  });
+
+  closeChat.addEventListener("click", () => {
+    chatBox.style.display = "none";
+    document.body.classList.remove('chat-open');
+  });
+
+  // Close chat on escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && chatBox.style.display === 'flex') {
+      chatBox.style.display = "none";
+      document.body.classList.remove('chat-open');
+    }
+  });
 
   function showAIMessage(text) {
     const aiDiv = document.createElement("div");
@@ -208,6 +712,7 @@
     messages.appendChild(aiDiv);
     scrollToBottom();
   }
+
   function showUserMessage(text) {
     const userDiv = document.createElement("div");
     userDiv.className = "message user";
@@ -215,44 +720,125 @@
     messages.appendChild(userDiv);
     scrollToBottom();
   }
+
   function scrollToBottom() {
-    messages.scrollTo({ top: messages.scrollHeight, behavior: "smooth" });
+    messages.scrollTo({ 
+      top: messages.scrollHeight, 
+      behavior: "smooth" 
+    });
   }
 
   let ws;
   function initWebSocket() {
-    ws = new WebSocket(`ws://${window.location.host}/ws/chat`);
-    ws.onopen = () => console.log("Connected");
-    ws.onmessage = (event) => { removeLoading(); showAIMessage(event.data); };
-    ws.onerror = () => showAIMessage("⚠️ Error: Cannot reach server");
-    ws.onclose = () => setTimeout(initWebSocket, 2000);
+    try {
+      ws = new WebSocket(`ws://${window.location.host}/ws/chat`);
+      
+      ws.onopen = () => {
+        console.log("Connected to AI assistant");
+        updateConnectionStatus(true);
+      };
+      
+      ws.onmessage = (event) => { 
+        removeLoading(); 
+        showAIMessage(event.data); 
+      };
+      
+      ws.onerror = () => {
+        removeLoading();
+        showAIMessage("⚠️ <strong>Connection Error</strong><br>Unable to reach the AI server. Please check your connection and try again.");
+        updateConnectionStatus(false);
+      };
+      
+      ws.onclose = () => {
+        updateConnectionStatus(false);
+        setTimeout(initWebSocket, 3000);
+      };
+    } catch (error) {
+      console.error("WebSocket connection failed:", error);
+      updateConnectionStatus(false);
+    }
   }
+
+  function updateConnectionStatus(connected) {
+    const statusDot = document.querySelector('.status-dot');
+    const statusText = document.querySelector('.status-indicator');
+    
+    if (connected) {
+      statusDot.style.background = 'var(--success)';
+      statusText.lastChild.textContent = 'Online';
+    } else {
+      statusDot.style.background = 'var(--error)';
+      statusText.lastChild.textContent = 'Offline';
+    }
+  }
+
+  // Initialize WebSocket connection
   initWebSocket();
 
   function sendMessage() {
     const msg = input.value.trim();
-    if (!msg || ws.readyState !== WebSocket.OPEN) return;
+    if (!msg) return;
+    
+    if (ws.readyState !== WebSocket.OPEN) {
+      showAIMessage("⚠️ <strong>Not Connected</strong><br>Please wait while I reconnect to the server...");
+      return;
+    }
+    
     showUserMessage(msg);
     showLoading();
-    ws.send(msg);
+    sendBtn.disabled = true;
+    
+    try {
+      ws.send(msg);
+    } catch (error) {
+      removeLoading();
+      showAIMessage("⚠️ <strong>Send Error</strong><br>Failed to send message. Please try again.");
+      sendBtn.disabled = false;
+    }
+    
     input.value = "";
+    input.style.height = 'auto';
+    setTimeout(() => sendBtn.disabled = false, 1000);
   }
 
   function showLoading() {
     const loadingDiv = document.createElement("div");
     loadingDiv.className = "message loading";
     loadingDiv.id = "loading";
-    loadingDiv.textContent = "AI is typing...";
+    loadingDiv.innerHTML = `
+      <span>AI is thinking</span>
+      <div class="typing-indicator">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    `;
     messages.appendChild(loadingDiv);
     scrollToBottom();
   }
+
   function removeLoading() {
     const loadingDiv = document.getElementById("loading");
-    if (loadingDiv) loadingDiv.remove();
+    if (loadingDiv) {
+      loadingDiv.style.animation = 'messageSlideIn 0.2s ease-out reverse';
+      setTimeout(() => loadingDiv.remove(), 200);
+    }
   }
 
+  // Event listeners
   sendBtn.addEventListener("click", sendMessage);
-  input.addEventListener("keypress", (e) => { if(e.key === "Enter") sendMessage(); });
+  
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // Smooth reveal animation on load
+  document.addEventListener('DOMContentLoaded', () => {
+    document.body.style.animation = 'fadeIn 0.8s ease-out';
+  });
 </script>
 </body>
 </html>

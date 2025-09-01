@@ -3,15 +3,38 @@ from bs4 import BeautifulSoup
 import re
 from urllib.parse import urljoin, urlparse
 import json
-from google.genai import Client  
 
 
-client = Client(api_key="AIzaSyAytoOd44cqWsUHp2rOtl0EeeJ51bKDYSI") 
+class OpenRouterClient:
+    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
+        self.api_key = api_key
+        self.model = model
+        self.api_url = "https://openrouter.ai/api/v1/chat/completions"
+
+    def generate_response(self, prompt: str):
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": "You are a helpful AI assistant."},
+                {"role": "user", "content": prompt}
+            ]
+        }
+        try:
+            response = requests.post(self.api_url, headers=headers, json=data, timeout=20)
+            response.raise_for_status()
+            resp_json = response.json()
+            return resp_json["choices"][0]["message"]["content"].strip()
+        except Exception as e:
+            return f"Error from OpenRouter: {str(e)}"
+
 
 def clean_text(text):
     text = text.strip()
-    text = re.sub(r'\s+', ' ', text)
-    return text
+    return re.sub(r'\s+', ' ', text)
 
 visited = set()
 
@@ -54,7 +77,6 @@ def scrape_page(url, base_url):
 
     return scraped_data
 
-
 def scrape_website(base_url):
     visited.add(base_url)
     all_data = []
@@ -68,68 +90,31 @@ def clean_scraped_data(scraped_data, base_domain=None):
 
     for page in scraped_data:
         cleaned_page = {}
-        
-        if 'title' in page and page['title']:
-            cleaned_page['title'] = page['title']
-        else:
-            cleaned_page['title'] = None
-
-        cleaned_headings = {}
-        if 'headings' in page:
-            for key in page['headings']:
-                headings_list = page['headings'][key]
-                new_list = []
-                for h in headings_list:
-                    if h not in new_list:
-                        new_list.append(h)
-                if new_list:
-                    cleaned_headings[key] = new_list
-        cleaned_page['headings'] = cleaned_headings
-        paragraphs = []
-        if 'paragraphs' in page:
-            for p in page['paragraphs']:
-                if p not in paragraphs:
-                    paragraphs.append(p)
-        cleaned_page['paragraphs'] = paragraphs
-
-        links = []
-        if 'links' in page:
-            for link in page['links']:
-                if link not in links:
-                    if base_domain:
-                        if urlparse(link)    == base_domain:
-                            links.append(link)
-                    else:
-                        links.append(link)
-        cleaned_page['links'] = links
-
-        images = []
-        if 'images' in page:
-            for img in page['images']:
-                if img not in images:
-                    images.append(img)
-        cleaned_page['images'] = images
-
+        cleaned_page['title'] = page.get('title', None)
+        cleaned_page['headings'] = {k: list(dict.fromkeys(v)) for k, v in page.get('headings', {}).items()}
+        cleaned_page['paragraphs'] = list(dict.fromkeys(page.get('paragraphs', [])))
+        cleaned_page['links'] = list(dict.fromkeys(page.get('links', [])))
+        cleaned_page['images'] = list(dict.fromkeys(page.get('images', [])))
         if cleaned_page['title'] or cleaned_page['paragraphs']:
             cleaned_data.append(cleaned_page)
-    print("data cleaned successfully")
+    print("Data cleaned successfully")
     return cleaned_data
+
+
 url = "https://webscraper.io/test-sites"
 result = scrape_website(url)
 base_domain = urlparse(url).netloc
 cleaned_result = clean_scraped_data(result, base_domain)
 
-
 with open("cleaned_scraped_data.json", "w", encoding="utf-8") as f:
     json.dump(cleaned_result, f, indent=4, ensure_ascii=False)
 
-system_prompt =f"""
-You are a helpful AI assistant.
 
+system_prompt = f"""
+You are a helpful AI assistant.
 Use ONLY this website data to answer user questions:
 {json.dumps(cleaned_result)}
 """
-
 
 user_message = f"""
 Here is the cleaned website data:
@@ -137,13 +122,12 @@ Here is the cleaned website data:
 
 Please summarize the website content and highlight main services, headings, and key points.
 """
+
 final_prompt = system_prompt + "\n\n" + user_message
 
+OPENROUTER_API_KEY = "" 
+client = OpenRouterClient(api_key=OPENROUTER_API_KEY, model="gpt-4o-mini")
 
-response = client.models.generate_content(
-    model="gemini-2.5-flash",
-    contents=final_prompt 
-)
+response_text = client.generate_response(final_prompt)
 
-print(response)
-
+print(response_text)
